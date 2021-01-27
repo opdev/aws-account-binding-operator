@@ -20,22 +20,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // AWSAccountBindingSpec defines the desired state of AWSAccountBinding
 type AWSAccountBindingSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of AWSAccountBinding. Edit AWSAccountBinding_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:required
+	// AccountID is the AWS AccountID to Bind
+	AccountID string `json:"accountID"`
+	// +kubebuilder:validation:required
+	// ARN is the AWS ARN to configure.
+	ARN string `json:"arn"`
 }
 
 // AWSAccountBindingStatus defines the observed state of AWSAccountBinding
 type AWSAccountBindingStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// NamespacedLabeled identifies whether the Namespaced has been labeled
+	NamespacedLabeled bool `json:"namespacedLabeled,omitempty"`
+	// ConfigurationUpdated identifies whether the ACK configmap has been updated
+	ConfigurationUpdated bool `json:"configurationUpdated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
