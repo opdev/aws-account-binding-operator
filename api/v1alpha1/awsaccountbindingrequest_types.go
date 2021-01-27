@@ -20,27 +20,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // AWSAccountBindingRequestSpec defines the desired state of AWSAccountBindingRequest
 type AWSAccountBindingRequestSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of AWSAccountBindingRequest. Edit AWSAccountBindingRequest_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:MaxLength=12
+	// +kubebuilder:validation:Required
+	// AccountID is an AWS Account ID to associate with the namespace.
+	AccountID string `json:"account_id,omitempty"`
+	// +kubebuilder:validation:Required
+	// RoleARN is the AWS Role ARN to be assumed by ACK service controllers.
+	RoleArn string `json:"role_arn,required"`
 }
 
 // AWSAccountBindingRequestStatus defines the observed state of AWSAccountBindingRequest
 type AWSAccountBindingRequestStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Approved indicates whether this binding request has been approved
+	// by a cluster administrator.
+	Approved bool `json:"approved"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-
+// +kubebuilder:printcolumn:name="Approved",type=bool,JSONPath=`.status.approved`
 // AWSAccountBindingRequest is the Schema for the awsaccountbindingrequests API
 type AWSAccountBindingRequest struct {
 	metav1.TypeMeta   `json:",inline"`
