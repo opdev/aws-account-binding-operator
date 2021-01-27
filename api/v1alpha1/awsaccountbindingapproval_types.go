@@ -24,11 +24,11 @@ import (
 type AWSAccountBindingApprovalSpec struct {
 	// +kubebuilder:validation:Required
 	// AccountID is an AWS Account ID.
-	AccountID string `json:"account_id"`
+	AccountID string `json:"accountID"`
 	// +kubebuilder:default:false
 	// Approved is whether or not to approve this binding request. To be
 	// set by a cluster administrator.
-	Approved bool `json:"Approved"`
+	Approved bool `json:"approved"`
 }
 
 // AWSAccountBindingApprovalStatus defines the observed state of AWSAccountBindingApproval

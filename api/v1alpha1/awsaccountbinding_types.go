@@ -41,6 +41,8 @@ type AWSAccountBindingStatus struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="Namespaced Labeled",type=bool,JSONPath=`.status.namespacedLabeled`
+// +kubebuilder:printcolumn:name="Configuration Updated",type=bool,JSONPath=`.status.configurationUpdated`
 
 // AWSAccountBinding is the Schema for the awsaccountbindings API
 type AWSAccountBinding struct {

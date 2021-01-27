@@ -25,10 +25,10 @@ type AWSAccountBindingRequestSpec struct {
 	// +kubebuilder:validation:MaxLength=12
 	// +kubebuilder:validation:Required
 	// AccountID is an AWS Account ID to associate with the namespace.
-	AccountID string `json:"account_id,omitempty"`
+	AccountID string `json:"accountID,omitempty"`
 	// +kubebuilder:validation:Required
-	// RoleARN is the AWS Role ARN to be assumed by ACK service controllers.
-	RoleArn string `json:"role_arn,required"`
+	// ARN is the AWS ARN to be assumed by ACK service controllers.
+	ARN string `json:"arn,required"`
 }
 
 // AWSAccountBindingRequestStatus defines the observed state of AWSAccountBindingRequest
