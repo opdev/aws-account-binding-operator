@@ -1,0 +1,7 @@
+apiVersion: integrations.opdev.io/v1alpha1
+kind: AWSAccountBindingRequest
+metadata:
+  name: awsaccountbindingrequest-sample
+spec:
+  # Add fields here
+  foo: bar
