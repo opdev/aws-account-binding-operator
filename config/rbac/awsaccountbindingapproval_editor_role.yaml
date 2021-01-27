@@ -1,0 +1,24 @@
+# permissions for end users to edit awsaccountbindingapprovals.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: awsaccountbindingapproval-editor-role
+rules:
+- apiGroups:
+  - integrations.opdev.io
+  resources:
+  - awsaccountbindingapprovals
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - integrations.opdev.io
+  resources:
+  - awsaccountbindingapprovals/status
+  verbs:
+  - get

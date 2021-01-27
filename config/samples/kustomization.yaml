@@ -2,4 +2,5 @@
 resources:
 - integrations_v1alpha1_awsaccountbindingrequest.yaml
 - integrations_v1alpha1_awsaccountbinding.yaml
+- integrations_v1alpha1_awsaccountbindingapproval.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

@@ -1,0 +1,7 @@
+apiVersion: integrations.opdev.io/v1alpha1
+kind: AWSAccountBindingApproval
+metadata:
+  name: awsaccountbindingapproval-sample
+spec:
+  # Add fields here
+  foo: bar

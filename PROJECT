@@ -11,6 +11,10 @@ resources:
   group: integrations
   kind: AWSAccountBinding
   version: v1alpha1
+- crdVersion: v1
+  group: integrations
+  kind: AWSAccountBindingApproval
+  version: v1alpha1
 version: 3-alpha
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
