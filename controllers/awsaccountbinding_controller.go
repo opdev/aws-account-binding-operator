@@ -18,13 +18,25 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/opdev/aws-account-binding-operator/controllers/states"
+	. "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	integrationsv1alpha1 "github.com/opdev/aws-account-binding-operator/api/v1alpha1"
+	awsint "github.com/opdev/aws-account-binding-operator/api/v1alpha1"
 )
 
 // AWSAccountBindingReconciler reconciles a AWSAccountBinding object
@@ -34,30 +46,157 @@ type AWSAccountBindingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+type accountBindingReconcilerFuncs = func(context.Context) (*ctrl.Result, error)
+
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the AWSAccountBinding object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.0/pkg/reconcile
+// Reconcile will attempt to make the cluster state of a given
+// AWSAccountBinding match the desired state.
+
+// contextKey is used to pass the instance key in reconciliation contexts
+type contextKey string
+
+var instKeyContextKey contextKey = "requested-instance-key"
+
+// Reconcile handles events indicating that the desired state of AWSAccountBinding resources
+// may have changed, and does what's necessary to make the existing state match the desired state.
 func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = r.Log.WithValues("awsaccountbinding", req.NamespacedName)
+	ctx = context.WithValue(ctx, instKeyContextKey, req.NamespacedName)
+	_ = r.Log.WithValues("AWSAccountBinding", req.NamespacedName)
+	r.Log.Info(fmt.Sprintf("starting reconciliation for %s", req.NamespacedName))
+	defer r.Log.Info(fmt.Sprintf("ending reconciliation for %s", req.NamespacedName))
 
-	// your logic here
+	state, res, err := r.DetermineState(ctx)
+	if ShouldHaltOrRequeue(res, err) {
+		r.Log.Info("Reconcile() halting while calling DetermineState")
+		return Evaluate(res, err)
+	}
 
-	return ctrl.Result{}, nil
+	// handle deletion
+	deletionSubReconcilers := []accountBindingReconcilerFuncs{
+		r.removeNamespaceAnnotation,
+		r.removeFinalizer,
+	}
+
+	if state.IsBeingDeleted() {
+		r.Log.Info("resource is being deleted, running deletion reconciliation flows")
+		for _, f := range deletionSubReconcilers {
+			if r, err := f(ctx); ShouldHaltOrRequeue(r, err) {
+				return Evaluate(r, err)
+			}
+		}
+
+		return Evaluate(DoNotRequeue())
+	}
+
+	r.Log.Info("running reconciliation flows")
+	subreconcilers := []accountBindingReconcilerFuncs{
+		r.addFinalizer,
+		r.updateStatus,
+		r.addNamespaceAnnotation,
+	}
+
+	for _, f := range subreconcilers {
+		// call the reconciler with the state
+		if r, err := f(ctx); ShouldHaltOrRequeue(r, err) {
+			return Evaluate(r, err)
+		}
+	}
+
+	// successfully reconciled
+	return Evaluate(DoNotRequeue())
+}
+
+// GetInstance queries the API for the instance of the custom resource.
+func (r *AWSAccountBindingReconciler) GetInstance(ctx context.Context) (awsint.AWSAccountBinding, *ctrl.Result, error) {
+	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
+	var instance awsint.AWSAccountBinding
+	if err := r.Get(ctx, instanceKey, &instance); err != nil {
+		if apierrors.IsNotFound(err) {
+			// it was deleted before reconcile completed
+			r.Log.Info("GetInstance() resource not found, it was likely deleted.")
+			cres, e := DoNotRequeue()
+			return awsint.AWSAccountBinding{}, cres, e
+		}
+
+		cres, e := RequeueWithError(err)
+		return awsint.AWSAccountBinding{}, cres, e
+	}
+
+	cres, e := ContinueReconciling()
+	return instance, cres, e
+}
+
+// GetNamespace queries the API for the namespace associated with the custom resource request.
+func (r *AWSAccountBindingReconciler) GetNamespace(ctx context.Context) (corev1.Namespace, *ctrl.Result, error) {
+	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
+
+	ns := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{Name: instanceKey.Name},
+	}
+
+	// the namespace should exist, but if it doesn't we cannot continue
+	if err := r.Get(ctx, client.ObjectKeyFromObject(&ns), &ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.Log.Error(err, "unable to continue with reconciliation if associated namespace does not exist")
+			// do not requeue because we don't want to cause a loop
+			cres, e := DoNotRequeue()
+			return corev1.Namespace{}, cres, e
+		}
+		cres, e := RequeueWithError(err)
+		return corev1.Namespace{}, cres, e
+	}
+
+	cres, e := ContinueReconciling()
+	return ns, cres, e
+}
+
+// GetResources queries the API for resources necessary to determine the state
+// of the existing AWSAccountBinding
+func (r *AWSAccountBindingReconciler) GetResources(ctx context.Context) (states.AccountBindingResources, *ctrl.Result, error) {
+	instance, res, err := r.GetInstance(ctx)
+	if ShouldHaltOrRequeue(res, err) {
+		r.Log.Info("GetResources() halting while calling GetInstance")
+		return states.AccountBindingResources{}, res, err
+	}
+
+	ns, res, err := r.GetNamespace(ctx)
+	if ShouldHaltOrRequeue(res, err) {
+		r.Log.Info("GetResources() halting while calling GetNamespace")
+		return states.AccountBindingResources{}, res, err
+	}
+
+	r.Log.Info("GetResources() completed successfully")
+	cres, e := ContinueReconciling()
+	return states.NewAccountBindingResources(instance, ns), cres, e
+}
+
+// DetermineState queries the API for resources necessary to determine the state
+// of existing resources, and then returns the state.
+func (r *AWSAccountBindingReconciler) DetermineState(ctx context.Context) (states.AccountBindingState, *ctrl.Result, error) {
+	resource, res, err := r.GetResources(ctx)
+	if ShouldHaltOrRequeue(res, err) {
+		r.Log.Info("DetermineState() halting while calling GetResources")
+		return states.AccountBindingState{}, res, err
+	}
+
+	r.Log.Info("DetermineState() completed successfully")
+	cres, e := ContinueReconciling()
+	return resource.ParseState(), cres, e
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AWSAccountBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&integrationsv1alpha1.AWSAccountBinding{}).
+		For(&awsint.AWSAccountBinding{}).
+		Owns(&corev1.Namespace{}).
+		WithEventFilter(predicate.Funcs{
+			UpdateFunc:  func(ue event.UpdateEvent) bool { return false },
+			GenericFunc: func(ge event.GenericEvent) bool { return false },
+		}).
+		// TODO build a predicate or use a predicate that prevents updates
+		// or controller restarts from re-reconciling an account binding.
 		Complete(r)
 }
