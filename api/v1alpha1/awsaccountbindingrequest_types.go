@@ -40,7 +40,8 @@ type AWSAccountBindingRequestStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Approved",type=bool,JSONPath=`.status.approved`
+// +kubebuilder:printcolumn:name="Approved",type=boolean,JSONPath=`.status.approved`
+
 // AWSAccountBindingRequest is the Schema for the awsaccountbindingrequests API
 type AWSAccountBindingRequest struct {
 	metav1.TypeMeta   `json:",inline"`
