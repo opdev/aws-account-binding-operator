@@ -1,7 +1,7 @@
 apiVersion: integrations.opdev.io/v1alpha1
 kind: AWSAccountBinding
 metadata:
-  name: awsaccountbinding-sample
+  name: default
 spec:
-  # Add fields here
-  foo: bar
+  accountID: "000000000000"
+  arn: "arn:aws:iam::000000000000:role/ACKS3AccessAssumer"
