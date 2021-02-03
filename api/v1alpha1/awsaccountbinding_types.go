@@ -32,17 +32,17 @@ type AWSAccountBindingSpec struct {
 
 // AWSAccountBindingStatus defines the observed state of AWSAccountBinding
 type AWSAccountBindingStatus struct {
-	// NamespacedLabeled identifies whether the Namespaced has been labeled
-	NamespacedLabeled bool `json:"namespacedLabeled,omitempty"`
+	// NamespaceAnnotated identifies whether the Namespaced has been labeled
+	NamespaceAnnotated *bool `json:"namespaceAnnotated"`
 	// ConfigurationUpdated identifies whether the ACK configmap has been updated
-	ConfigurationUpdated bool `json:"configurationUpdated,omitempty"`
+	ConfigurationUpdated *bool `json:"configurationUpdated"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:printcolumn:name="Namespaced Labeled",type=bool,JSONPath=`.status.namespacedLabeled`
-// +kubebuilder:printcolumn:name="Configuration Updated",type=bool,JSONPath=`.status.configurationUpdated`
+// +kubebuilder:printcolumn:name="Namespaced Annotated",type=boolean,JSONPath=`.status.namespaceAnnotated`
+// +kubebuilder:printcolumn:name="Configuration Updated",type=boolean,JSONPath=`.status.configurationUpdated`
 
 // AWSAccountBinding is the Schema for the awsaccountbindings API
 type AWSAccountBinding struct {
