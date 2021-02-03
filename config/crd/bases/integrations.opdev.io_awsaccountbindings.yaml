@@ -1,0 +1,81 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: awsaccountbindings.integrations.opdev.io
+spec:
+  group: integrations.opdev.io
+  names:
+    kind: AWSAccountBinding
+    listKind: AWSAccountBindingList
+    plural: awsaccountbindings
+    singular: awsaccountbinding
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.namespaceAnnotated
+      name: Namespaced Annotated
+      type: boolean
+    - jsonPath: .status.configurationUpdated
+      name: Configuration Updated
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AWSAccountBinding is the Schema for the awsaccountbindings API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AWSAccountBindingSpec defines the desired state of AWSAccountBinding
+            properties:
+              accountID:
+                description: AccountID is the AWS AccountID to Bind
+                type: string
+              arn:
+                description: ARN is the AWS ARN to configure.
+                type: string
+            required:
+            - accountID
+            - arn
+            type: object
+          status:
+            description: AWSAccountBindingStatus defines the observed state of AWSAccountBinding
+            properties:
+              configurationUpdated:
+                description: ConfigurationUpdated identifies whether the ACK configmap
+                  has been updated
+                type: boolean
+              namespaceAnnotated:
+                description: NamespaceAnnotated identifies whether the Namespaced
+                  has been labeled
+                type: boolean
+            required:
+            - configurationUpdated
+            - namespaceAnnotated
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

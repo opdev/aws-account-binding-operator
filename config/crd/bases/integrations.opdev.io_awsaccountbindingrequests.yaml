@@ -1,0 +1,77 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: awsaccountbindingrequests.integrations.opdev.io
+spec:
+  group: integrations.opdev.io
+  names:
+    kind: AWSAccountBindingRequest
+    listKind: AWSAccountBindingRequestList
+    plural: awsaccountbindingrequests
+    singular: awsaccountbindingrequest
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.approved
+      name: Approved
+      type: boolean
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AWSAccountBindingRequest is the Schema for the awsaccountbindingrequests
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AWSAccountBindingRequestSpec defines the desired state of
+              AWSAccountBindingRequest
+            properties:
+              accountID:
+                description: AccountID is an AWS Account ID to associate with the
+                  namespace.
+                maxLength: 12
+                type: string
+              arn:
+                description: ARN is the AWS ARN to be assumed by ACK service controllers.
+                type: string
+            required:
+            - arn
+            type: object
+          status:
+            description: AWSAccountBindingRequestStatus defines the observed state
+              of AWSAccountBindingRequest
+            properties:
+              approved:
+                description: Approved indicates whether this binding request has been
+                  approved by a cluster administrator.
+                type: boolean
+            required:
+            - approved
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
