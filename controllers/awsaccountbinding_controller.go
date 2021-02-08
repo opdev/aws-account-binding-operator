@@ -33,8 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	awsint "github.com/opdev/aws-account-binding-operator/api/v1alpha1"
 )
@@ -46,19 +44,12 @@ type AWSAccountBindingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-type accountBindingReconcilerFuncs = func(context.Context) (*ctrl.Result, error)
-
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=integrations.opdev.io,resources=awsaccountbindings/finalizers,verbs=update
 
 // Reconcile will attempt to make the cluster state of a given
 // AWSAccountBinding match the desired state.
-
-// contextKey is used to pass the instance key in reconciliation contexts
-type contextKey string
-
-var instKeyContextKey contextKey = "requested-instance-key"
 
 // Reconcile handles events indicating that the desired state of AWSAccountBinding resources
 // may have changed, and does what's necessary to make the existing state match the desired state.
@@ -75,7 +66,7 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// handle deletion
-	deletionSubReconcilers := []accountBindingReconcilerFuncs{
+	deletionSubReconcilers := []subreconcilerFuncs{
 		r.removeNamespaceAnnotation,
 		r.removeFinalizer,
 	}
@@ -92,7 +83,7 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	r.Log.Info("running reconciliation flows")
-	subreconcilers := []accountBindingReconcilerFuncs{
+	subreconcilers := []subreconcilerFuncs{
 		r.addFinalizer,
 		r.updateStatus,
 		r.addNamespaceAnnotation,
@@ -192,10 +183,12 @@ func (r *AWSAccountBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&awsint.AWSAccountBinding{}).
 		Owns(&corev1.Namespace{}).
-		WithEventFilter(predicate.Funcs{
-			UpdateFunc:  func(ue event.UpdateEvent) bool { return false },
-			GenericFunc: func(ge event.GenericEvent) bool { return false },
-		}).
+		// WithEventFilter(predicate.Funcs{
+		// 	UpdateFunc:  func(ue event.UpdateEvent) bool { return false },
+		// 	GenericFunc: func(ge event.GenericEvent) bool { return false },
+		// 	CreateFunc:  func(ce event.CreateEvent) bool { return true },
+		// 	DeleteFunc:  func(de event.DeleteEvent) bool { return true },
+		// }).
 		// TODO build a predicate or use a predicate that prevents updates
 		// or controller restarts from re-reconciling an account binding.
 		Complete(r)

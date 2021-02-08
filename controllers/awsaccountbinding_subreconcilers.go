@@ -12,7 +12,7 @@ import (
 )
 
 // removeFinalizer will remove the finalizer from the instance. This function matches
-// the function alias accountBindingReconcilerFuncs.
+// the function alias subreconcilerFuncs.
 func (r *AWSAccountBindingReconciler) removeFinalizer(ctx context.Context) (*ctrl.Result, error) {
 	logger := r.Log.WithName("removeFinalizer")
 	logger.Info("starting")
@@ -30,7 +30,7 @@ func (r *AWSAccountBindingReconciler) removeFinalizer(ctx context.Context) (*ctr
 }
 
 // addFinalizer will add the finalizer from the instance. This function matches
-// the function alias accountBindingReconcilerFuncs.
+// the function alias subreconcilerFuncs.
 func (r *AWSAccountBindingReconciler) addFinalizer(ctx context.Context) (*ctrl.Result, error) {
 	logger := r.Log.WithName("addFinalizer")
 	logger.Info("starting")
