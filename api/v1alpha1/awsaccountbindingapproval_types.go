@@ -22,6 +22,7 @@ import (
 
 // AWSAccountBindingApprovalSpec defines the desired state of AWSAccountBindingApproval
 type AWSAccountBindingApprovalSpec struct {
+	// +kubebuilder:validation:MaxLength=12
 	// +kubebuilder:validation:Required
 	// AccountID is an AWS Account ID.
 	AccountID string `json:"accountID"`
@@ -29,13 +30,24 @@ type AWSAccountBindingApprovalSpec struct {
 	// Approved is whether or not to approve this binding request. To be
 	// set by a cluster administrator.
 	Approved bool `json:"approved"`
+	// ARN is the AWS ARN to configure.
+	// +kubebuilder:validation:Required
+	ARN string `json:"arn"`
 }
 
 // AWSAccountBindingApprovalStatus defines the observed state of AWSAccountBindingApproval
-type AWSAccountBindingApprovalStatus struct{}
+type AWSAccountBindingApprovalStatus struct {
+	// Approved indicates whether the account binding has been approved.
+	Approved *bool `json:"approved"`
+	// +nullable
+	// ApprovedAt is the timestamp when the account binding was approved.
+	ApprovedAt *string `json:"approvedAt"`
+}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Approved",type=string,JSONPath=`.status.approved`
+// +kubebuilder:printcolumn:name="Approved At",type=string,JSONPath=`.status.approvedAt`
 
 // AWSAccountBindingApproval is the Schema for the awsaccountbindingapprovals API
 type AWSAccountBindingApproval struct {

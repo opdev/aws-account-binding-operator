@@ -16,7 +16,14 @@ spec:
     singular: awsaccountbindingapproval
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.approved
+      name: Approved
+      type: string
+    - jsonPath: .status.approvedAt
+      name: Approved At
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: AWSAccountBindingApproval is the Schema for the awsaccountbindingapprovals
@@ -40,18 +47,36 @@ spec:
             properties:
               accountID:
                 description: AccountID is an AWS Account ID.
+                maxLength: 12
                 type: string
               approved:
                 description: Approved is whether or not to approve this binding request.
                   To be set by a cluster administrator.
                 type: boolean
+              arn:
+                description: ARN is the AWS ARN to configure.
+                type: string
             required:
             - accountID
             - approved
+            - arn
             type: object
           status:
             description: AWSAccountBindingApprovalStatus defines the observed state
               of AWSAccountBindingApproval
+            properties:
+              approved:
+                description: Approved indicates whether the account binding has been
+                  approved.
+                type: boolean
+              approvedAt:
+                description: ApprovedAt is the timestamp when the account binding
+                  was approved.
+                nullable: true
+                type: string
+            required:
+            - approved
+            - approvedAt
             type: object
         type: object
     served: true

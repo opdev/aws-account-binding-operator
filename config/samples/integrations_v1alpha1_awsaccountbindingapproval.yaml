@@ -1,7 +1,8 @@
 apiVersion: integrations.opdev.io/v1alpha1
 kind: AWSAccountBindingApproval
 metadata:
-  name: awsaccountbindingapproval-sample
+  name: default-000000000001
 spec:
-  # Add fields here
-  foo: bar
+  accountID: "000000000001"
+  approved: false
+  arn: "arn:aws:iam::000000000001:role/ACKS3AccessAssumer"

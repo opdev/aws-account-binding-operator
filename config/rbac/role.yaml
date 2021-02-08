@@ -9,6 +9,32 @@ rules:
 - apiGroups:
   - integrations.opdev.io
   resources:
+  - awsaccountbindingapprovals
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - integrations.opdev.io
+  resources:
+  - awsaccountbindingapprovals/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - integrations.opdev.io
+  resources:
+  - awsaccountbindingapprovals/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - integrations.opdev.io
+  resources:
   - awsaccountbindingrequests
   verbs:
   - create
