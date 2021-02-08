@@ -94,6 +94,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "AWSAccountBinding")
 		os.Exit(1)
 	}
+	if err = (&controllers.AWSAccountBindingApprovalReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("AWSAccountBindingApproval"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "AWSAccountBindingApproval")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
