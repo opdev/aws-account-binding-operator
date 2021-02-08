@@ -79,7 +79,7 @@ func (a *AccountBindingState) ExistingARN() string { return a.existingARN }
 // IsBeingDeleted observes the state and determines if the instance is
 // being deleted by checking for a deletion timestamp.
 func (a *AccountBindingState) IsBeingDeleted() bool {
-	return !a.instance.DeletionTimestamp.Equal(nil)
+	return a.isBeingDeleted
 }
 
 // NamespaceAnnotated observes the state and determines if the instance's
