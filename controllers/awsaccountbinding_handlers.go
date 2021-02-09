@@ -8,13 +8,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	. "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
+	reconc "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
 )
 
 // handleFinalizer executes finalizer management
 func (r *AWSAccountBindingReconciler) handleFinalizer(ctx context.Context, modifyFinalizer finalizerFunc) (*ctrl.Result, error) {
 	resources, result, err := r.GetResources(ctx)
-	if ShouldHaltOrRequeue(result, err) {
+	if reconc.ShouldHaltOrRequeue(result, err) {
 		return result, err
 	}
 
@@ -22,16 +22,16 @@ func (r *AWSAccountBindingReconciler) handleFinalizer(ctx context.Context, modif
 	patch := client.MergeFrom(inst.DeepCopy())
 	modifyFinalizer(inst, constants.Finalizer)
 	if err := r.Patch(ctx, inst, patch); err != nil {
-		return RequeueWithError(err)
+		return reconc.RequeueWithError(err)
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
 
 // handleNamespace handles
 func (r *AWSAccountBindingReconciler) handleNamespace(ctx context.Context, handleAnnotation annotationFunc) (*ctrl.Result, error) {
 	st, result, err := r.DetermineState(ctx)
-	if ShouldHaltOrRequeue(result, err) {
+	if reconc.ShouldHaltOrRequeue(result, err) {
 		return result, err
 	}
 
@@ -42,8 +42,8 @@ func (r *AWSAccountBindingReconciler) handleNamespace(ctx context.Context, handl
 	baseToPatch := client.MergeFrom(ns.DeepCopy())
 	ns.Annotations = handleAnnotation(ns.GetAnnotations(), annotationHandlerVal)
 	if err := r.Patch(ctx, ns, baseToPatch); err != nil {
-		return RequeueWithError(err)
+		return reconc.RequeueWithError(err)
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }

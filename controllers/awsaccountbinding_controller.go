@@ -25,7 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/opdev/aws-account-binding-operator/controllers/states"
-	. "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
+	reconc "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,9 +59,9 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	defer lgr.Info("ending reconciliation")
 
 	state, res, err := r.DetermineState(ctx)
-	if ShouldHaltOrRequeue(res, err) {
+	if reconc.ShouldHaltOrRequeue(res, err) {
 		lgr.Info("Reconcile() halting while calling DetermineState")
-		return Evaluate(res, err)
+		return reconc.Evaluate(res, err)
 	}
 
 	// handle deletion
@@ -73,12 +73,12 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if state.IsBeingDeleted() {
 		lgr.Info("resource is being deleted, running deletion reconciliation flows")
 		for _, f := range deletionSubReconcilers {
-			if r, err := f(ctx); ShouldHaltOrRequeue(r, err) {
-				return Evaluate(r, err)
+			if r, err := f(ctx); reconc.ShouldHaltOrRequeue(r, err) {
+				return reconc.Evaluate(r, err)
 			}
 		}
 
-		return Evaluate(DoNotRequeue())
+		return reconc.Evaluate(reconc.DoNotRequeue())
 	}
 
 	lgr.Info("running reconciliation flows")
@@ -90,13 +90,13 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	for _, f := range subreconcilers {
 		// call the reconciler with the state
-		if r, err := f(ctx); ShouldHaltOrRequeue(r, err) {
-			return Evaluate(r, err)
+		if r, err := f(ctx); reconc.ShouldHaltOrRequeue(r, err) {
+			return reconc.Evaluate(r, err)
 		}
 	}
 
 	// successfully reconciled
-	return Evaluate(DoNotRequeue())
+	return reconc.Evaluate(reconc.DoNotRequeue())
 }
 
 // GetInstance queries the API for the instance of the custom resource.
@@ -111,15 +111,15 @@ func (r *AWSAccountBindingReconciler) GetInstance(ctx context.Context) (awsint.A
 		if apierrors.IsNotFound(err) {
 			// it was deleted before reconcile completed
 			lgr.Info("resource not found, it was likely deleted.")
-			cres, e := DoNotRequeue()
+			cres, e := reconc.DoNotRequeue()
 			return awsint.AWSAccountBinding{}, cres, e
 		}
 
-		cres, e := RequeueWithError(err)
+		cres, e := reconc.RequeueWithError(err)
 		return awsint.AWSAccountBinding{}, cres, e
 	}
 
-	cres, e := ContinueReconciling()
+	cres, e := reconc.ContinueReconciling()
 	return instance, cres, e
 }
 
@@ -140,14 +140,14 @@ func (r *AWSAccountBindingReconciler) GetNamespace(ctx context.Context) (corev1.
 		if apierrors.IsNotFound(err) {
 			lgr.Error(err, "unable to continue with reconciliation if associated namespace does not exist")
 			// do not requeue because we don't want to cause a loop
-			cres, e := DoNotRequeue()
+			cres, e := reconc.DoNotRequeue()
 			return corev1.Namespace{}, cres, e
 		}
-		cres, e := RequeueWithError(err)
+		cres, e := reconc.RequeueWithError(err)
 		return corev1.Namespace{}, cres, e
 	}
 
-	cres, e := ContinueReconciling()
+	cres, e := reconc.ContinueReconciling()
 	return ns, cres, e
 }
 
@@ -159,19 +159,19 @@ func (r *AWSAccountBindingReconciler) GetResources(ctx context.Context) (states.
 	defer lgr.Info("ending")
 
 	instance, res, err := r.GetInstance(ctx)
-	if ShouldHaltOrRequeue(res, err) {
+	if reconc.ShouldHaltOrRequeue(res, err) {
 		lgr.Info("halting while calling GetInstance")
 		return states.AccountBindingResources{}, res, err
 	}
 
 	ns, res, err := r.GetNamespace(ctx)
-	if ShouldHaltOrRequeue(res, err) {
+	if reconc.ShouldHaltOrRequeue(res, err) {
 		lgr.Info("halting while calling GetNamespace")
 		return states.AccountBindingResources{}, res, err
 	}
 
 	lgr.Info("completed successfully")
-	cres, e := ContinueReconciling()
+	cres, e := reconc.ContinueReconciling()
 	return states.NewAccountBindingResources(instance, ns), cres, e
 }
 
@@ -183,13 +183,13 @@ func (r *AWSAccountBindingReconciler) DetermineState(ctx context.Context) (state
 	defer lgr.Info("ending")
 
 	resource, res, err := r.GetResources(ctx)
-	if ShouldHaltOrRequeue(res, err) {
+	if reconc.ShouldHaltOrRequeue(res, err) {
 		lgr.Info("DetermineState() halting while calling GetResources")
 		return states.AccountBindingState{}, res, err
 	}
 
 	lgr.Info("DetermineState() completed successfully")
-	cres, e := ContinueReconciling()
+	cres, e := reconc.ContinueReconciling()
 	return resource.ParseState(), cres, e
 }
 

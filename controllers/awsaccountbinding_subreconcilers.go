@@ -8,7 +8,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	. "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
+	reconc "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
 )
 
 // removeFinalizer will remove the finalizer from the instance. This function matches
@@ -19,14 +19,14 @@ func (r *AWSAccountBindingReconciler) removeFinalizer(ctx context.Context) (*ctr
 	defer lgr.Info("ending")
 
 	// call handler
-	if res, err := r.handleFinalizer(ctx, controllerutil.RemoveFinalizer); ShouldHaltOrRequeue(res, err) {
+	if res, err := r.handleFinalizer(ctx, controllerutil.RemoveFinalizer); reconc.ShouldHaltOrRequeue(res, err) {
 		if err != nil {
 			lgr.Error(err, "error handling finalizer")
 		}
 		return res, err
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
 
 // addFinalizer will add the finalizer from the instance. This function matches
@@ -37,14 +37,14 @@ func (r *AWSAccountBindingReconciler) addFinalizer(ctx context.Context) (*ctrl.R
 	defer lgr.Info("ending")
 
 	// call handler
-	if res, err := r.handleFinalizer(ctx, controllerutil.AddFinalizer); ShouldRequeue(res, err) {
+	if res, err := r.handleFinalizer(ctx, controllerutil.AddFinalizer); reconc.ShouldRequeue(res, err) {
 		if err != nil {
 			lgr.Error(err, "error handling finalizer")
 		}
 		return res, err
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
 
 // updateStatus manages status reconciliations.
@@ -54,7 +54,7 @@ func (r *AWSAccountBindingReconciler) updateStatus(ctx context.Context) (*ctrl.R
 	defer lgr.Info("ending reconciliation")
 
 	st, result, err := r.DetermineState(ctx)
-	if ShouldHaltOrRequeue(result, err) {
+	if reconc.ShouldHaltOrRequeue(result, err) {
 		return result, err
 	}
 
@@ -67,10 +67,10 @@ func (r *AWSAccountBindingReconciler) updateStatus(ctx context.Context) (*ctrl.R
 		updated.Status = status
 		if err := r.Status().Update(ctx, updated); err != nil {
 			lgr.Error(err, "instance patching error", "resource", inst.GetName())
-			return RequeueWithError(err)
+			return reconc.RequeueWithError(err)
 		}
 	}
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
 
 func (r *AWSAccountBindingReconciler) addNamespaceAnnotation(ctx context.Context) (*ctrl.Result, error) {
@@ -78,11 +78,11 @@ func (r *AWSAccountBindingReconciler) addNamespaceAnnotation(ctx context.Context
 	lgr.Info("starting reconciliation")
 	defer lgr.Info("ending reconciliation")
 
-	if res, err := r.handleNamespace(ctx, addAnnotation); ShouldHaltOrRequeue(res, err) {
+	if res, err := r.handleNamespace(ctx, addAnnotation); reconc.ShouldHaltOrRequeue(res, err) {
 		return res, err
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
 
 func (r *AWSAccountBindingReconciler) removeNamespaceAnnotation(ctx context.Context) (*ctrl.Result, error) {
@@ -90,9 +90,9 @@ func (r *AWSAccountBindingReconciler) removeNamespaceAnnotation(ctx context.Cont
 	lgr.Info("starting reconciliation")
 	defer lgr.Info("ending reconciliation")
 
-	if res, err := r.handleNamespace(ctx, deleteAnnotation); ShouldHaltOrRequeue(res, err) {
+	if res, err := r.handleNamespace(ctx, deleteAnnotation); reconc.ShouldHaltOrRequeue(res, err) {
 		return res, err
 	}
 
-	return ContinueReconciling()
+	return reconc.ContinueReconciling()
 }
