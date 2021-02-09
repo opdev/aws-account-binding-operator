@@ -4,19 +4,12 @@ import (
 	"context"
 
 	"github.com/opdev/aws-account-binding-operator/controllers/constants"
-	"k8s.io/apimachinery/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	reconc "github.com/opdev/aws-account-binding-operator/helpers/reconcileresults"
 )
-
-// parseBindingInstanceKey returns the types.NamespacedName from the instanceKey
-// of a given AWSAccountBindingApproval
-func parseBindingInstanceKey(key types.NamespacedName) types.NamespacedName {
-	return types.NamespacedName{Name: key.Namespace}
-}
 
 // handleFinalizer executes finalizer management
 func (r *AWSAccountBindingApprovalReconciler) handleFinalizer(ctx context.Context, modifyFinalizer finalizerFunc) (*ctrl.Result, error) {
