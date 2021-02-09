@@ -14,7 +14,7 @@ spec:
     listKind: AWSAccountBindingApprovalList
     plural: awsaccountbindingapprovals
     singular: awsaccountbindingapproval
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - jsonPath: .status.approved

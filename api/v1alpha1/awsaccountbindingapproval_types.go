@@ -46,6 +46,7 @@ type AWSAccountBindingApprovalStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name="Approved",type=string,JSONPath=`.status.approved`
 // +kubebuilder:printcolumn:name="Approved At",type=string,JSONPath=`.status.approvedAt`
 
