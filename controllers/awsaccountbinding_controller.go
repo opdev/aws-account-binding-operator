@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,13 +54,13 @@ type AWSAccountBindingReconciler struct {
 // may have changed, and does what's necessary to make the existing state match the desired state.
 func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx = context.WithValue(ctx, instKeyContextKey, req.NamespacedName)
-	_ = r.Log.WithValues("AWSAccountBinding", req.NamespacedName)
-	r.Log.Info(fmt.Sprintf("starting reconciliation for %s", req.NamespacedName))
-	defer r.Log.Info(fmt.Sprintf("ending reconciliation for %s", req.NamespacedName))
+	lgr := r.Log.WithValues("Binding", req.NamespacedName)
+	lgr.Info("starting reconciliation")
+	defer lgr.Info("ending reconciliation")
 
 	state, res, err := r.DetermineState(ctx)
 	if ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("Reconcile() halting while calling DetermineState")
+		lgr.Info("Reconcile() halting while calling DetermineState")
 		return Evaluate(res, err)
 	}
 
@@ -72,7 +71,7 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if state.IsBeingDeleted() {
-		r.Log.Info("resource is being deleted, running deletion reconciliation flows")
+		lgr.Info("resource is being deleted, running deletion reconciliation flows")
 		for _, f := range deletionSubReconcilers {
 			if r, err := f(ctx); ShouldHaltOrRequeue(r, err) {
 				return Evaluate(r, err)
@@ -82,7 +81,7 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return Evaluate(DoNotRequeue())
 	}
 
-	r.Log.Info("running reconciliation flows")
+	lgr.Info("running reconciliation flows")
 	subreconcilers := []subreconcilerFuncs{
 		r.addFinalizer,
 		r.updateStatus,
@@ -102,12 +101,16 @@ func (r *AWSAccountBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 // GetInstance queries the API for the instance of the custom resource.
 func (r *AWSAccountBindingReconciler) GetInstance(ctx context.Context) (awsint.AWSAccountBinding, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetInstance")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
 	var instance awsint.AWSAccountBinding
 	if err := r.Get(ctx, instanceKey, &instance); err != nil {
 		if apierrors.IsNotFound(err) {
 			// it was deleted before reconcile completed
-			r.Log.Info("GetInstance() resource not found, it was likely deleted.")
+			lgr.Info("resource not found, it was likely deleted.")
 			cres, e := DoNotRequeue()
 			return awsint.AWSAccountBinding{}, cres, e
 		}
@@ -122,6 +125,10 @@ func (r *AWSAccountBindingReconciler) GetInstance(ctx context.Context) (awsint.A
 
 // GetNamespace queries the API for the namespace associated with the custom resource request.
 func (r *AWSAccountBindingReconciler) GetNamespace(ctx context.Context) (corev1.Namespace, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetNamespace")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
 
 	ns := corev1.Namespace{
@@ -131,7 +138,7 @@ func (r *AWSAccountBindingReconciler) GetNamespace(ctx context.Context) (corev1.
 	// the namespace should exist, but if it doesn't we cannot continue
 	if err := r.Get(ctx, client.ObjectKeyFromObject(&ns), &ns); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.Log.Error(err, "unable to continue with reconciliation if associated namespace does not exist")
+			lgr.Error(err, "unable to continue with reconciliation if associated namespace does not exist")
 			// do not requeue because we don't want to cause a loop
 			cres, e := DoNotRequeue()
 			return corev1.Namespace{}, cres, e
@@ -147,19 +154,23 @@ func (r *AWSAccountBindingReconciler) GetNamespace(ctx context.Context) (corev1.
 // GetResources queries the API for resources necessary to determine the state
 // of the existing AWSAccountBinding
 func (r *AWSAccountBindingReconciler) GetResources(ctx context.Context) (states.AccountBindingResources, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetResources")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	instance, res, err := r.GetInstance(ctx)
 	if ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("GetResources() halting while calling GetInstance")
+		lgr.Info("halting while calling GetInstance")
 		return states.AccountBindingResources{}, res, err
 	}
 
 	ns, res, err := r.GetNamespace(ctx)
 	if ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("GetResources() halting while calling GetNamespace")
+		lgr.Info("halting while calling GetNamespace")
 		return states.AccountBindingResources{}, res, err
 	}
 
-	r.Log.Info("GetResources() completed successfully")
+	lgr.Info("completed successfully")
 	cres, e := ContinueReconciling()
 	return states.NewAccountBindingResources(instance, ns), cres, e
 }
@@ -167,13 +178,17 @@ func (r *AWSAccountBindingReconciler) GetResources(ctx context.Context) (states.
 // DetermineState queries the API for resources necessary to determine the state
 // of existing resources, and then returns the state.
 func (r *AWSAccountBindingReconciler) DetermineState(ctx context.Context) (states.AccountBindingState, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "DetermineState")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	resource, res, err := r.GetResources(ctx)
 	if ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("DetermineState() halting while calling GetResources")
+		lgr.Info("DetermineState() halting while calling GetResources")
 		return states.AccountBindingState{}, res, err
 	}
 
-	r.Log.Info("DetermineState() completed successfully")
+	lgr.Info("DetermineState() completed successfully")
 	cres, e := ContinueReconciling()
 	return resource.ParseState(), cres, e
 }

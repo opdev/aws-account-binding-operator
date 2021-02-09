@@ -15,9 +15,9 @@ import (
 )
 
 func (r *AWSAccountBindingApprovalReconciler) ensureApproval(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithName("haltIfNotApproved()")
-	logger.Info("starting reconciliation")
-	defer logger.Info("ending reconciliation")
+	lgr := r.Log.WithValues("task", "haltIfNotApproved()")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
 
 	state, res, err := r.DetermineState(ctx)
 	if reconc.ShouldHaltOrRequeue(res, err) {
@@ -39,14 +39,14 @@ func (r *AWSAccountBindingApprovalReconciler) ensureApproval(ctx context.Context
 // TODO lots of duplciate code here with other controllers in this operator.
 // restructure these to register generic functions as individual struct methods.
 func (r *AWSAccountBindingApprovalReconciler) removeFinalizer(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithName("removeFinalizer")
-	logger.Info("starting")
-	defer logger.Info("ending")
+	lgr := r.Log.WithValues("task", "removeFinalizer")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
 
 	// call handler
 	if res, err := r.handleFinalizer(ctx, controllerutil.RemoveFinalizer); reconc.ShouldHaltOrRequeue(res, err) {
 		if err != nil {
-			logger.Error(err, "error handling finalizer")
+			lgr.Error(err, "error handling finalizer")
 		}
 		return res, err
 	}
@@ -57,14 +57,14 @@ func (r *AWSAccountBindingApprovalReconciler) removeFinalizer(ctx context.Contex
 // addFinalizer will add the finalizer from the instance. This function matches
 // the function alias subreconcilerFuncs.
 func (r *AWSAccountBindingApprovalReconciler) addFinalizer(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithName("addFinalizer")
-	logger.Info("starting")
-	defer logger.Info("ending")
+	lgr := r.Log.WithValues("task", "addFinalizer")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
 
 	// call handler
 	if res, err := r.handleFinalizer(ctx, controllerutil.AddFinalizer); reconc.ShouldRequeue(res, err) {
 		if err != nil {
-			logger.Error(err, "error handling finalizer")
+			lgr.Error(err, "error handling finalizer")
 		}
 		return res, err
 	}
@@ -74,9 +74,9 @@ func (r *AWSAccountBindingApprovalReconciler) addFinalizer(ctx context.Context) 
 
 // updateStatus manages status reconciliations.
 func (r *AWSAccountBindingApprovalReconciler) updateStatus(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithName("updateStatus")
-	logger.Info("starting reconciliation")
-	defer logger.Info("ending reconciliation")
+	lgr := r.Log.WithValues("task", "updateStatus")
+	lgr.Info("starting reconciliation")
+	defer lgr.Info("ending reconciliation")
 
 	st, result, err := r.DetermineState(ctx)
 	if reconc.ShouldHaltOrRequeue(result, err) {
@@ -87,11 +87,11 @@ func (r *AWSAccountBindingApprovalReconciler) updateStatus(ctx context.Context) 
 	crStatus := inst.Status
 	status := st.CurrentStatus()
 	if status != crStatus {
-		logger.Info(fmt.Sprintf("updating status for resources %s", inst.GetName()))
+		lgr.Info(fmt.Sprintf("updating status for resources %s", inst.GetName()))
 		updated := inst.DeepCopy()
 		updated.Status = status
 		if err := r.Status().Update(ctx, updated); err != nil {
-			logger.Error(err, "instance patching error", "resource", inst.GetName())
+			lgr.Error(err, "instance patching error", "resource", inst.GetName())
 			return reconc.RequeueWithError(err)
 		}
 	}
@@ -99,9 +99,9 @@ func (r *AWSAccountBindingApprovalReconciler) updateStatus(ctx context.Context) 
 }
 
 func (r *AWSAccountBindingApprovalReconciler) createAccountBinding(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithValues("task", "createAccountBinding()")
-	logger.Info("starting")
-	defer logger.Info("ending")
+	lgr := r.Log.WithValues("task", "createAccountBinding")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
 
 	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
 
@@ -113,52 +113,54 @@ func (r *AWSAccountBindingApprovalReconciler) createAccountBinding(ctx context.C
 	// preconfigure the spec, but we'll get the resource before we create
 	// and if it exists, those values will be overwritten anyway.
 	binding := awsint.AWSAccountBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: parseBindingInstanceKey(instanceKey).Name},
+		ObjectMeta: metav1.ObjectMeta{Name: bindingInstanceKey(instanceKey).Name},
 		Spec: awsint.AWSAccountBindingSpec{
 			AccountID: st.AccountID(),
 			ARN:       st.ARN(),
 		},
 	}
 
-	if err := r.Get(ctx, parseBindingInstanceKey(instanceKey), &binding); err != nil {
+	if err := r.Get(ctx, bindingInstanceKey(instanceKey), &binding); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("creating account binding", "targetNamespace", instanceKey.Name)
+			lgr.Info("creating account binding", "targetNamespace", instanceKey.Name)
 			if err := r.Create(ctx, &binding); err != nil {
-				logger.Error(err, "binding creation error", "resource", instanceKey.Name)
+				lgr.Error(err, "binding creation error", "resource", instanceKey.Name)
 				return reconc.RequeueWithError(err)
 			}
-			// we got some other error
-			logger.Error(err, "createAccountBinding() some error to poll for account binding")
-			return reconc.RequeueWithError(err)
+
+			return reconc.ContinueReconciling()
 		}
 
-		logger.Info("createAccountBinding() not creating resource as it already exists") // TODO more verbose logging
+		// we got some other error
+		lgr.Error(err, "some error to poll for account binding")
+		return reconc.RequeueWithError(err)
 	}
 
+	lgr.Info("not creating resource as it already exists")
 	return reconc.ContinueReconciling()
 }
 
 func (r *AWSAccountBindingApprovalReconciler) removeAccountBinding(ctx context.Context) (*ctrl.Result, error) {
-	logger := r.Log.WithValues("task", "removeAccountBinding()")
-	logger.Info("starting")
-	defer logger.Info("ending")
+	lgr := r.Log.WithValues("task", "removeAccountBinding()")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
 
 	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
 
 	// TODO need to generate this binding from inputs.
 	binding := awsint.AWSAccountBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: parseBindingInstanceKey(instanceKey).Name},
+		ObjectMeta: metav1.ObjectMeta{Name: bindingInstanceKey(instanceKey).Name},
 	}
 
-	logger.Info("deleting account binding", "targetNamespace", instanceKey.Name)
+	lgr.Info("deleting account binding", "targetNamespace", instanceKey.Name)
 	if err := r.Delete(ctx, &binding); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("removeAccountBinding() resource not found, it was likely deleted.")
+			lgr.Info("removeAccountBinding() resource not found, it was likely deleted.")
 			// continue reconciliation in case there's more to do.
 			return reconc.ContinueReconciling()
 		}
 
-		logger.Error(err, "binding deletion error", "resource", instanceKey.Name)
+		lgr.Error(err, "binding deletion error", "resource", instanceKey.Name)
 		return reconc.RequeueWithError(err)
 	}
 

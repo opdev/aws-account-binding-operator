@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/opdev/aws-account-binding-operator/controllers/states"
@@ -47,13 +46,13 @@ type AWSAccountBindingApprovalReconciler struct {
 // move the current state of the cluster closer to the desired state.
 func (r *AWSAccountBindingApprovalReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	ctx = context.WithValue(ctx, instKeyContextKey, req.NamespacedName)
-	_ = r.Log.WithValues("AWSAccountBindingApproval", req.NamespacedName)
-	r.Log.Info(fmt.Sprintf("starting reconciliation for %s", req.NamespacedName))
-	defer r.Log.Info(fmt.Sprintf("ending reconciliation for %s", req.NamespacedName))
+	lgr := r.Log.WithValues("Approval", req.NamespacedName)
+	lgr.Info("starting reconciliation")
+	defer lgr.Info("ending reconciliation")
 
 	state, res, err := r.DetermineState(ctx)
 	if reconc.ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("Reconcile() halting while calling DetermineState")
+		lgr.Info("Reconcile() halting while calling DetermineState")
 		return reconc.Evaluate(res, err)
 	}
 
@@ -64,7 +63,7 @@ func (r *AWSAccountBindingApprovalReconciler) Reconcile(ctx context.Context, req
 	}
 
 	if state.IsBeingDeleted() {
-		r.Log.Info("resource is being deleted, running deletion reconciliation flows")
+		lgr.Info("resource is being deleted, running deletion reconciliation flows")
 		for _, f := range deletionSubReconcilers {
 			if r, err := f(ctx); reconc.ShouldHaltOrRequeue(r, err) {
 				return reconc.Evaluate(r, err)
@@ -74,7 +73,7 @@ func (r *AWSAccountBindingApprovalReconciler) Reconcile(ctx context.Context, req
 		return reconc.Evaluate(reconc.DoNotRequeue())
 	}
 
-	r.Log.Info("running reconciliation flows")
+	lgr.Info("running reconciliation flows")
 	subreconcilers := []subreconcilerFuncs{
 		r.updateStatus,
 		r.ensureApproval,
@@ -94,12 +93,16 @@ func (r *AWSAccountBindingApprovalReconciler) Reconcile(ctx context.Context, req
 
 // GetInstance queries the API for the instance of the custom resource.
 func (r *AWSAccountBindingApprovalReconciler) GetInstance(ctx context.Context) (awsint.AWSAccountBindingApproval, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetInstance")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	instanceKey := ctx.Value(instKeyContextKey).(types.NamespacedName)
 	var instance awsint.AWSAccountBindingApproval
 	if err := r.Get(ctx, instanceKey, &instance); err != nil {
 		if apierrors.IsNotFound(err) {
 			// it was deleted before reconcile completed
-			r.Log.Info("GetInstance() resource not found, it was likely deleted.")
+			lgr.Info("GetInstance() resource not found, it was likely deleted.")
 			cres, e := reconc.DoNotRequeue()
 			return awsint.AWSAccountBindingApproval{}, cres, e
 		}
@@ -115,13 +118,17 @@ func (r *AWSAccountBindingApprovalReconciler) GetInstance(ctx context.Context) (
 // GetResources queries the API for resources necessary to determine the state
 // of the existing AWSAccountBindingApproval
 func (r *AWSAccountBindingApprovalReconciler) GetResources(ctx context.Context) (states.AccountBindingApprovalResources, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetResources")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	instance, res, err := r.GetInstance(ctx)
 	if reconc.ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("GetResources() halting while calling GetInstance")
+		lgr.Info("GetResources() halting while calling GetInstance")
 		return states.AccountBindingApprovalResources{}, res, err
 	}
 
-	r.Log.Info("GetResources() completed successfully")
+	lgr.Info("GetResources() completed successfully")
 	cres, e := reconc.ContinueReconciling()
 	return states.NewAccountBindingApprovalResources(instance), cres, e
 }
@@ -129,13 +136,17 @@ func (r *AWSAccountBindingApprovalReconciler) GetResources(ctx context.Context) 
 // DetermineState queries the API for resources necessary to determine the state
 // of existing resources, and then returns the state.
 func (r *AWSAccountBindingApprovalReconciler) DetermineState(ctx context.Context) (states.AccountBindingApprovalState, *ctrl.Result, error) {
+	lgr := r.Log.WithValues("task", "GetNamespace")
+	lgr.Info("starting")
+	defer lgr.Info("ending")
+
 	resource, res, err := r.GetResources(ctx)
 	if reconc.ShouldHaltOrRequeue(res, err) {
-		r.Log.Info("DetermineState() halting while calling GetInstance")
+		lgr.Info("DetermineState() halting while calling GetInstance")
 		return states.AccountBindingApprovalState{}, res, err
 	}
 
-	r.Log.Info("DetermineState() completed successfully")
+	lgr.Info("DetermineState() completed successfully")
 	cres, e := reconc.ContinueReconciling()
 	return resource.ParseState(), cres, e
 }
