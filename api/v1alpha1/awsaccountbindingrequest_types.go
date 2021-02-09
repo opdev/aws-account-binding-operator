@@ -35,7 +35,7 @@ type AWSAccountBindingRequestSpec struct {
 type AWSAccountBindingRequestStatus struct {
 	// Approved indicates whether this binding request has been approved
 	// by a cluster administrator.
-	Approved bool `json:"approved"`
+	Approved *bool `json:"approved"`
 }
 
 // +kubebuilder:object:root=true

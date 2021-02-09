@@ -3,5 +3,5 @@ kind: AWSAccountBindingRequest
 metadata:
   name: awsaccountbindingrequest-sample
 spec:
-  # Add fields here
-  foo: bar
+  accountID: "000000000001"
+  arn: "arn:aws:iam::000000000001:role/ACKS3AccessAssumer"
