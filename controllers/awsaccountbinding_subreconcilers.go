@@ -37,7 +37,7 @@ func (r *AWSAccountBindingReconciler) addFinalizer(ctx context.Context) (*ctrl.R
 	defer lgr.Info("ending")
 
 	// call handler
-	if res, err := r.handleFinalizer(ctx, controllerutil.AddFinalizer); reconc.ShouldRequeue(res, err) {
+	if res, err := r.handleFinalizer(ctx, controllerutil.AddFinalizer); reconc.ShouldHaltOrRequeue(res, err) {
 		if err != nil {
 			lgr.Error(err, "error handling finalizer")
 		}
